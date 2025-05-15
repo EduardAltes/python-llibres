@@ -20,7 +20,7 @@ def get_book_price_blanquerna(query):
         time.sleep(3)
 
         try:
-            product_link = driver.find_element(By.CSS_SELECTOR, "div.producto a[href*='/products/']")
+            product_link = driver.find_element(By.CSS_SELECTOR, "div.producto a")
             partial_url = product_link.get_attribute("href")
             full_url = partial_url if partial_url.startswith("http") else BASE_URL + partial_url
         except:
