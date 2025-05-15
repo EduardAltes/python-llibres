@@ -1,40 +1,49 @@
+import re
+import time
+import json
+import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-import requests
-import time
-import json
 
-def get_book_price_casadellibro(query, ean13):
+
+def get_book_price_blanquerna(query):
     options = Options()
     options.add_argument("--headless")
     driver = webdriver.Chrome(options=options)
 
     try:
-        # 1. Navegar i buscar
-        search_url = f"https://www.casadellibro.com/busqueda-generica?query={query}"
+        # Buscar el llibre a la web
+        search_url = f"https://www.llibreriablanquerna.cat/producto/listadobuscar?buscar={query}"
         driver.get(search_url)
         time.sleep(3)
 
-        # 2. Obtenir primer resultat i accedir al llibre
-        book = driver.find_element(By.CSS_SELECTOR, "div.product-card a")
-        book_url = book.get_attribute("href")
+        # Trobar primer resultat de llibre
+        book_elem = driver.find_element(By.CSS_SELECTOR, "div.producto a[href*='/products/']")
+        partial_url = book_elem.get_attribute("href")
+        book_url = partial_url if "http" in partial_url else "https://www.llibreriablanquerna.cat" + partial_url
+
+        # Extreure EAN13 del títol (format: "TÍTOL | EAN13 | AUTOR")
+        title_attr = book_elem.get_attribute("title")
+        match = re.search(r'\b(\d{13})\b', title_attr)
+        ean13 = match.group(1) if match else query  # Fallback si no troba
+
+        # Anar a la pàgina del llibre
         driver.get(book_url)
         time.sleep(3)
 
-        # 3. Obtenir preu
-        price_elem = driver.find_element(By.CSS_SELECTOR, "div.product-price span.price")
+        # Obtenir preu
+        price_elem = driver.find_element(By.CSS_SELECTOR, "span.precio")
         price_text = price_elem.text.strip()
-        price = float(price_text.replace("€", "").replace(",", "."))
+        price = float(price_text.replace("€", "").replace(",", ".").strip())
 
-        # 4. Obtenir estat de disponibilitat
+        # Obtenir disponibilitat
         try:
-            availability_elem = driver.find_element(By.CSS_SELECTOR, "div.product-main-details span.availability")
+            availability_elem = driver.find_element(By.CSS_SELECTOR, "span.disponibilidad")
             status = availability_elem.text.lower()
         except:
-            status = "available"  # Si no s'especifica, assumim disponible
+            status = "available"
 
-        # Normalitzar status
         if "disponible" in status:
             normalized_status = "available"
         elif "no disponible" in status or "agotado" in status:
@@ -45,7 +54,7 @@ def get_book_price_casadellibro(query, ean13):
         return {
             'EAN13': ean13,
             'url': book_url,
-            'ecommerce': 'casadellibro',
+            'ecommerce': 'llibreriablanquerna',
             'status': normalized_status,
             'price': price
         }
@@ -53,14 +62,15 @@ def get_book_price_casadellibro(query, ean13):
     except Exception as e:
         print("Error:", e)
         return {
-            'EAN13': ean13,
+            'EAN13': query,
             'url': '',
-            'ecommerce': 'casadellibro',
+            'ecommerce': 'llibreriablanquerna',
             'status': 'not_found',
             'price': None
         }
     finally:
         driver.quit()
+
 
 def send_to_api(data):
     url = "https://bookpricetracker.risusapp.com/api/bookPriceUpdate"
@@ -70,18 +80,13 @@ def send_to_api(data):
     print("Status:", response.status_code)
     print("Response:", response.text)
 
+
 if __name__ == "__main__":
-    # Entrada manual per consola
     query = input("Introdueix el títol, autor o ISBN del llibre: ").strip()
-    ean13 = input("Introdueix l'EAN13 (si el tens, si no el pots deixar en blanc): ").strip()
-
-    if not ean13:
-        ean13 = query  # Suposem que és el mateix
-
-    book_data = get_book_price_casadellibro(query, ean13)
+    book_data = get_book_price_blanquerna(query)
 
     if book_data['status'] != 'not_found':
-        print(f"Llibre trobat amb status '{book_data['status']}': {book_data['price']}€")
+        print(f"Llibre trobat amb EAN {book_data['EAN13']} - Status: '{book_data['status']}' - Preu: {book_data['price']}€")
         send_to_api(book_data)
     else:
         print("Llibre no trobat. No s'envia res a l'API.")
