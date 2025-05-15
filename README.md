@@ -2,7 +2,7 @@
 
 ## Descripció
 
-Aquest projecte és un script en Python que utilitza Selenium per buscar el preu d’un llibre a Casa del Libro segons el títol, autor o ISBN, i envia la informació a una API externa (`bookpricetracker.risusapp.com`).  
+Aquest projecte és un script en Python que utilitza Selenium per buscar el preu d’un llibre a Llibreria Blanquerna segons el títol, autor o ISBN, i envia la informació a una API externa (`bookpricetracker.risusapp.com`).  
 
 L’objectiu és fer un seguiment automatitzat dels preus dels llibres.
 
@@ -65,8 +65,8 @@ El script mostrarà el preu i enviarà la informació a l’API si el llibre est
 ```bash
 {
   "EAN13": "9788418928949",
-  "url": "https://www.casadellibro.com/...",
-  "ecommerce": "casadellibro",
+  "url": "https:///www.llibreriablanquerna.cat//...",
+  "ecommerce": "llibreriablanquerna",
   "status": "available",
   "price": 28.40
 }
